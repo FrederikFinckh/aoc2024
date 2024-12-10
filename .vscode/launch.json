@@ -118,6 +118,43 @@
     {
       "type": "lldb",
       "request": "launch",
+      "name": "Debug executable 'day5'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=day5",
+          "--package=aoc2024"
+        ],
+        "filter": {
+          "name": "day5",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'day5'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=day5",
+          "--package=aoc2024"
+        ],
+        "filter": {
+          "name": "day5",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
       "name": "Debug executable 'day4'",
       "cargo": {
         "args": [
