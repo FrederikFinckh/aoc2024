@@ -8,13 +8,7 @@ fn main() {
         .filter(|x| x.len() > 0)
         .map(|x| x.to_string())
         .collect();
-    println!("{}", p1(&input));
-    println!("{}", p2(&input));
-}
-
-fn p1(input: &Vec<String>) -> u64 {
-    let mut visited: HashSet<(usize, usize)> = HashSet::new();
-    let mut position = (0..input.len())
+    let starting_position = (0..input.len())
         .map(|row| (row, input[row].find('^')))
         .filter(|(_, col)| col.is_some())
         .map(|(row, col)| (row, col.unwrap()))
@@ -28,6 +22,17 @@ fn p1(input: &Vec<String>) -> u64 {
                 .collect::<Vec<(usize, usize)>>()
         })
         .collect();
+    println!("{}", p1(&input, &starting_position, &obstacles));
+    println!("{}", p2(&input, &starting_position, &obstacles));
+}
+
+fn p1(
+    input: &Vec<String>,
+    starting_position: &(usize, usize),
+    obstacles: &Vec<(usize, usize)>,
+) -> u64 {
+    let mut visited: HashSet<(usize, usize)> = HashSet::new();
+    let mut position = starting_position.clone();
 
     let mut direction = 0;
     // direction
@@ -160,7 +165,59 @@ fn find_obstacle(
     }
 }
 
-fn p2(input: &Vec<String>) -> u64 {
-    // _visualize(input, &HashSet::new(), Vec::new());
-    2
+fn p2(
+    input: &Vec<String>,
+    starting_position: &(usize, usize),
+    obstacles: &Vec<(usize, usize)>,
+) -> u64 {
+    let mut possible_loops = 0;
+    for row in 0..input.len() {
+        println!("{}", row);
+        for col in 0..input[0].len() {
+            if (row == starting_position.0 && col == starting_position.1)
+                || obstacles.contains(&(row, col))
+            {
+                continue;
+            }
+
+            let new_obstacle = (row, col);
+            let mut new_obstacles = obstacles.clone();
+            new_obstacles.push(new_obstacle);
+
+            let mut hit_obstacle_from_direction: HashSet<((usize, usize), u8)> = HashSet::new();
+            let mut position = starting_position.clone();
+
+            let mut direction = 0;
+            // let mut visited: HashSet<(usize, usize)> = HashSet::new();
+
+            if loop {
+                let obstacle = find_obstacle(position, direction, &new_obstacles);
+                if obstacle.is_none() {
+                    break false;
+                } else {
+                    let obstacle = obstacle.unwrap();
+                    if hit_obstacle_from_direction.contains(&(*obstacle, direction)) {
+                        break true;
+                    }
+                    // for field in get_fields(position, direction, *obstacle) {
+                    //     visited.insert(field);
+                    // }
+                    hit_obstacle_from_direction.insert((*obstacle, direction));
+                    position = match direction {
+                        0 => (obstacle.0 + 1, position.1),
+                        1 => (position.0, obstacle.1 - 1),
+                        2 => (obstacle.0 - 1, position.1),
+                        3 => (position.0, obstacle.1 + 1),
+                        _ => panic!("invalid direction!"),
+                    };
+
+                    direction = next_direction(direction);
+                }
+            } {
+                possible_loops += 1;
+                // _visualize(input, &visited, new_obstacles);
+            }
+        }
+    }
+    possible_loops
 }
