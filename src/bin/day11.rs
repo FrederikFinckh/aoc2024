@@ -52,25 +52,23 @@ fn p1(input: &Vec<u64>) -> usize {
     }
     stones.len()
 }
-//impl Iterator<Item = u64>
-fn blink182(
-    stones: &Vec<u64>,
-    mut cache: HashMap<u64, Vec<u64>>,
-) -> (Vec<u64>, HashMap<u64, Vec<u64>>) {
-    (
-        stones
-            .iter()
-            .flat_map(|stone| match cache.get(stone) {
-                Some(x) => x.clone(),
+
+fn blink182(amount_of_stones_by_value: HashMap<u64, usize>) -> HashMap<u64, usize> {
+    let mut new_amounts_by_value = HashMap::new();
+    for (stone, amount) in amount_of_stones_by_value {
+        let resulting_stones = update_single_stone(stone);
+        for new_stone in resulting_stones {
+            match new_amounts_by_value.get(&new_stone) {
                 None => {
-                    let stones = update_single_stone(*stone);
-                    cache.insert(*stone, stones.clone());
-                    stones
+                    new_amounts_by_value.insert(new_stone, amount);
                 }
-            })
-            .collect(),
-        cache.clone(),
-    )
+                Some(old_amount) => {
+                    new_amounts_by_value.insert(new_stone, old_amount + amount);
+                }
+            }
+        }
+    }
+    new_amounts_by_value
 }
 
 fn update_single_stone(stone: u64) -> Vec<u64> {
@@ -95,13 +93,20 @@ fn update_single_stone(stone: u64) -> Vec<u64> {
 }
 
 fn p2(input: &Vec<u64>) -> usize {
-    let mut cache: HashMap<u64, Vec<u64>> = HashMap::new();
-    cache.insert(0, vec![1]);
-
-    let mut stones = input.clone();
-    for iteration in 0..75 {
-        println!("iteration {}", iteration);
-        (stones, cache) = blink182(&stones, cache.clone());
+    let mut amount_of_stones_by_value: HashMap<u64, usize> = HashMap::new();
+    for stone in input {
+        match amount_of_stones_by_value.get(stone) {
+            None => {
+                amount_of_stones_by_value.insert(*stone, 1);
+            }
+            Some(amount) => {
+                amount_of_stones_by_value.insert(*stone, amount + 1);
+            }
+        }
     }
-    stones.len()
+
+    for _iteration in 0..75 {
+        amount_of_stones_by_value = blink182(amount_of_stones_by_value);
+    }
+    amount_of_stones_by_value.values().sum()
 }
