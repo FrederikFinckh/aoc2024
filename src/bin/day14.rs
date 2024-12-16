@@ -1,4 +1,4 @@
-use std::{env::args, fs::read_to_string};
+use std::{env::args, fs::read_to_string, io::stdin};
 
 fn main() {
     let field_size = match args().last() {
@@ -46,12 +46,30 @@ fn main() {
     println!("{}", p2(&input, field_size));
 }
 
-fn p1(input: &Vec<((i64, i64), (i64, i64))>, field_size: (i64, i64)) -> u64 {
+fn p1(input: &Vec<((i64, i64), (i64, i64))>, field_size: (i64, i64)) -> usize {
     let seconds = 100;
     let positions_after_seconds = update_positions(input, field_size, seconds);
-    println!("{:?}", positions_after_seconds);
-    visualize(field_size, positions_after_seconds);
-    1
+    score(positions_after_seconds, field_size)
+}
+
+fn score(positions: Vec<(i64, i64)>, field_size: (i64, i64)) -> usize {
+    let top_left = positions
+        .iter()
+        .filter(|(x, y)| *x < field_size.0 / 2 && *y < field_size.1 / 2)
+        .count();
+    let top_right = positions
+        .iter()
+        .filter(|(x, y)| *x > field_size.0 / 2 && *y < field_size.1 / 2)
+        .count();
+    let bottom_left = positions
+        .iter()
+        .filter(|(x, y)| *x < field_size.0 / 2 && *y > field_size.1 / 2)
+        .count();
+    let bottom_right = positions
+        .iter()
+        .filter(|(x, y)| *x > field_size.0 / 2 && *y > field_size.1 / 2)
+        .count();
+    top_left * top_right * bottom_left * bottom_right
 }
 
 fn update_positions(
@@ -79,11 +97,11 @@ fn update_positions(
     positions_after_seconds
 }
 
-fn visualize(field_size: (i64, i64), positions_after_100s: Vec<(i64, i64)>) {
+fn visualize(field_size: (i64, i64), position: &Vec<(i64, i64)>) {
     println!();
     for y in 0..field_size.1 {
         for x in 0..field_size.0 {
-            if positions_after_100s.contains(&(x, y)) {
+            if position.contains(&(x, y)) {
                 print!("X");
             } else {
                 print!(".");
@@ -94,6 +112,25 @@ fn visualize(field_size: (i64, i64), positions_after_100s: Vec<(i64, i64)>) {
 }
 
 fn p2(input: &Vec<((i64, i64), (i64, i64))>, field_size: (i64, i64)) -> u64 {
-    println!("{:?}, {:?}", input, field_size);
+    let positions_to_vizualize: Vec<(i64, Vec<(i64, i64)>)> = (0..=field_size.0 * field_size.1)
+        .map(|second| (second, update_positions(input, field_size, second)))
+        .filter(|(_, position)| has_some_diagonal(position))
+        .collect();
+
+    let mut test = String::new();
+    for position in positions_to_vizualize {
+        println!("---");
+        visualize(field_size, &position.1);
+        println!("{}", position.0);
+        stdin()
+            .read_line(&mut test)
+            .expect("Did not enter a correct string");
+    }
     2
+}
+
+fn has_some_diagonal(position: &Vec<(i64, i64)>) -> bool {
+    position
+        .iter()
+        .any(|(x, y)| (0..6).all(|i| position.contains(&(x + i, y + i))))
 }
