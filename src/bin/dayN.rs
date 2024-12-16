@@ -9,7 +9,6 @@ fn main() {
         }
     ))
     .unwrap()
-    .to_string()
     .split('\n')
     .filter(|x| x.len() > 0)
     .map(|x| x.to_string())
