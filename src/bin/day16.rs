@@ -10,6 +10,7 @@ fn main() {
         "inputs/day16{}",
         match args().last() {
             Some(x) if x == "test".to_string() => "_test",
+            Some(x) if x == "test2".to_string() => "_test2",
             _ => "",
         }
     ))
@@ -40,34 +41,23 @@ fn main() {
         .map(|(r, c)| (r, c, 'E'))
         .unwrap();
     let target_position2 = (target_position1.0, target_position1.1, 'N');
+    let target_positions = vec![target_position1, target_position2];
+    let cost_by_point = dijkstra(&input, start_position, &target_positions);
 
-    println!(
-        "{}",
-        p1(
-            &input,
-            start_position,
-            vec![target_position1, target_position2]
-        )
-    );
-    println!(
-        "{}",
-        p2(
-            &input,
-            start_position,
-            vec![target_position1, target_position2]
-        )
-    );
+    println!("{}", p1(&cost_by_point, &target_positions));
+    println!("{}", p2(&cost_by_point, &target_positions));
 }
 
 fn dijkstra(
     input: &Vec<Vec<char>>,
     start_position: (usize, usize, char),
     target_positions: &Vec<(usize, usize, char)>,
-) -> HashMap<(usize, usize, char), u64> {
-    let mut cost_by_position: HashMap<(usize, usize, char), u64> = HashMap::new();
+) -> HashMap<(usize, usize, char), (u64, Vec<(usize, usize, char)>)> {
+    let mut cost_by_position: HashMap<(usize, usize, char), (u64, Vec<(usize, usize, char)>)> =
+        HashMap::new();
     let mut visited: HashSet<(usize, usize, char)> = HashSet::new();
-    cost_by_position.insert(start_position, 0);
-    let mut loop_var = 0;
+    cost_by_position.insert(start_position, (0, vec![]));
+    let mut loop_var = 1;
     loop {
         if cost_by_position.get(&target_positions[0]).is_some()
             || cost_by_position.get(&target_positions[1]).is_some()
@@ -77,18 +67,30 @@ fn dijkstra(
         let current_point = cost_by_position
             .iter()
             .filter(|(x, __)| !visited.contains(x))
-            .min_by_key(|(_, &cost)| cost)
-            .map(|(&point, &cost)| (point, cost))
+            .min_by_key(|(_, cost)| cost.0)
+            .map(|(&point, cost_and_paths)| (point, cost_and_paths.clone()))
             .unwrap()
             .clone();
         visited.insert(current_point.0);
         let neighbours = get_neighbours(input, current_point.0);
         for neighbour in neighbours {
-            if !cost_by_position
-                .get(&neighbour.0)
-                .is_some_and(|cost| *cost < current_point.1 + neighbour.1)
+            let maybe_entry = cost_by_position.get(&neighbour.0);
+
+            if maybe_entry.is_none()
+                || maybe_entry.is_some_and(|(cost, _)| *cost > current_point.1 .0 + neighbour.1)
             {
-                cost_by_position.insert(neighbour.0, current_point.1 + neighbour.1);
+                cost_by_position.insert(
+                    neighbour.0,
+                    (current_point.1 .0 + neighbour.1, vec![current_point.0]),
+                );
+            } else if maybe_entry.is_some_and(|(cost, _)| *cost == current_point.1 .0 + neighbour.1)
+            {
+                let mut possible_predecessors = current_point.1 .1.clone();
+                possible_predecessors.push(current_point.0);
+                cost_by_position.insert(
+                    neighbour.0,
+                    (current_point.1 .0 + neighbour.1, possible_predecessors),
+                );
             }
         }
         // _debug(input, &cost_by_position, current_point);
@@ -104,8 +106,8 @@ fn dijkstra(
 
 fn _debug(
     input: &Vec<Vec<char>>,
-    cost_by_position: &HashMap<(usize, usize, char), u64>,
-    current_point: ((usize, usize, char), u64),
+    cost_by_position: &HashMap<(usize, usize, char), (u64, Vec<(usize, usize, char)>)>,
+    current_point: ((usize, usize, char), (u64, Vec<(usize, usize, char)>)),
 ) {
     println!("just visited {:?}", current_point);
     for entry in cost_by_position {
@@ -121,7 +123,7 @@ fn _debug(
                     "{}",
                     cost_by_position
                         .get(&(row, col, 'N'))
-                        .map(|x| format!("N{:4} ", x))
+                        .map(|x| format!("N{:4} ", x.0))
                         .unwrap_or("N.... ".to_string())
                 );
             }
@@ -135,7 +137,7 @@ fn _debug(
                     "{}",
                     cost_by_position
                         .get(&(row, col, 'E'))
-                        .map(|x| format!("E{:4} ", x))
+                        .map(|x| format!("E{:4} ", x.0))
                         .unwrap_or("E.... ".to_string())
                 );
             }
@@ -149,7 +151,7 @@ fn _debug(
                     "{}",
                     cost_by_position
                         .get(&(row, col, 'S'))
-                        .map(|x| format!("S{:4} ", x))
+                        .map(|x| format!("S{:4} ", x.0))
                         .unwrap_or("S.... ".to_string())
                 );
             }
@@ -163,7 +165,7 @@ fn _debug(
                     "{}",
                     cost_by_position
                         .get(&(row, col, 'W'))
-                        .map(|x| format!("W{:4} ", x))
+                        .map(|x| format!("W{:4} ", x.0))
                         .unwrap_or("W.... ".to_string())
                 );
             }
@@ -172,6 +174,8 @@ fn _debug(
 
         println!();
     }
+    println!("current point {:?}", current_point.0);
+    println!("{:?}", current_point.1 .1);
 }
 
 fn get_neighbours(
@@ -207,23 +211,52 @@ fn get_neighbours(
 }
 
 fn p1(
-    input: &Vec<Vec<char>>,
-    start_position: (usize, usize, char),
-    target_positions: Vec<(usize, usize, char)>,
+    cost_by_point: &HashMap<(usize, usize, char), (u64, Vec<(usize, usize, char)>)>,
+    target_positions: &Vec<(usize, usize, char)>,
 ) -> u64 {
-    let cost_by_point = dijkstra(input, start_position, &target_positions);
-    *cost_by_point
+    cost_by_point
         .get(&target_positions[0])
-        .unwrap_or_else(|| cost_by_point.get(&target_positions[1]).unwrap())
+        .map(|x| x.0)
+        .unwrap_or_else(|| {
+            cost_by_point
+                .get(&target_positions[1])
+                .map(|x| x.0)
+                .unwrap()
+        })
 }
 
 fn p2(
-    input: &Vec<Vec<char>>,
-    start_position: (usize, usize, char),
-    target_positions: Vec<(usize, usize, char)>,
-) -> u64 {
-    let _ = input;
-    let _ = start_position;
-    let _ = target_positions;
-    2
+    cost_by_point: &HashMap<(usize, usize, char), (u64, Vec<(usize, usize, char)>)>,
+    target_positions: &Vec<(usize, usize, char)>,
+) -> usize {
+    let mut new_points: Vec<(usize, usize, char)> = cost_by_point
+        .get(&target_positions[0])
+        .map(|x| x.1.clone())
+        .unwrap_or_else(|| {
+            cost_by_point
+                .get(&target_positions[1])
+                .map(|x| x.1.clone())
+                .unwrap()
+        });
+
+    let mut points = HashSet::new();
+
+    loop {
+        // println!("{:?}", new_points);
+
+        for x in new_points.clone() {
+            points.insert(x);
+        }
+        new_points = new_points
+            .into_iter()
+            .flat_map(|x| cost_by_point.get(&x).unwrap().1.clone())
+            .collect();
+        if new_points.is_empty() {
+            break;
+        }
+    }
+
+    let set: HashSet<(usize, usize)> = points.iter().map(|x| (x.0, x.1)).collect();
+
+    set.len() + 1 // +1 for the final field
 }
