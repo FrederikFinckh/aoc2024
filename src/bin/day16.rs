@@ -85,7 +85,7 @@ fn dijkstra(
                 );
             } else if maybe_entry.is_some_and(|(cost, _)| *cost == current_point.1 .0 + neighbour.1)
             {
-                let mut possible_predecessors = current_point.1 .1.clone();
+                let mut possible_predecessors = maybe_entry.unwrap().1.clone();
                 possible_predecessors.push(current_point.0);
                 cost_by_position.insert(
                     neighbour.0,
