@@ -45,7 +45,29 @@ fn main() {
     let cost_by_point = dijkstra(&input, start_position, &target_positions);
 
     println!("{}", p1(&cost_by_point, &target_positions));
-    println!("{}", p2(&cost_by_point, &target_positions));
+    let points = calculate_points_on_best_paths(&cost_by_point, &target_positions);
+    println!();
+    print!(" ");
+    for col in 0..input[0].len() {
+        print!("{}", col % 10);
+    }
+    println!();
+    for row in 0..input.len() {
+        print!("{}", row % 10);
+        for col in 0..input[row].len() {
+            if points.contains(&(row, col)) {
+                print!("O");
+            } else {
+                print!(".")
+            }
+        }
+        println!()
+    }
+    println!();
+
+    //p2
+
+    println!("{}", points.len() + 1);
 }
 
 fn dijkstra(
@@ -225,10 +247,10 @@ fn p1(
         })
 }
 
-fn p2(
+fn calculate_points_on_best_paths(
     cost_by_point: &HashMap<(usize, usize, char), (u64, Vec<(usize, usize, char)>)>,
     target_positions: &Vec<(usize, usize, char)>,
-) -> usize {
+) -> HashSet<(usize, usize)> {
     let mut new_points: Vec<(usize, usize, char)> = cost_by_point
         .get(&target_positions[0])
         .map(|x| x.1.clone())
@@ -242,8 +264,6 @@ fn p2(
     let mut points = HashSet::new();
 
     loop {
-        // println!("{:?}", new_points);
-
         for x in new_points.clone() {
             points.insert(x);
         }
@@ -256,7 +276,5 @@ fn p2(
         }
     }
 
-    let set: HashSet<(usize, usize)> = points.iter().map(|x| (x.0, x.1)).collect();
-
-    set.len() + 1 // +1 for the final field
+    points.iter().map(|x| (x.0, x.1)).collect()
 }
